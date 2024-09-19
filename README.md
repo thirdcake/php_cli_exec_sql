@@ -1,2 +1,9 @@
-# php_cli_exec_sql
-php cli exec sql
+# php cli exec sql
+
+linux command
+
+```
+php phpfilename.php sqlfilename.sql
+```
+
+
