@@ -1,0 +1,3 @@
+-- insert sql
+INSERT INTO testtable ( test_body )
+VALUES ( 'これはinsertされた文章です' );

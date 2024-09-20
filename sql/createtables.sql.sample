@@ -1,0 +1,5 @@
+-- create sql
+CREATE TABLE IF NOT EXISTS testtable (
+    test_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    test_body TEXT NOT NULL
+);

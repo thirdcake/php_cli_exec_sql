@@ -27,12 +27,12 @@ while ( false !== $line = fgets($envfile, 1024) ) {
 
 // dbname などのチェック
 if( 
-        ! array_key_exists('dbname', $env) 
-        || ! array_key_exists('host', $env) 
-        || ! array_key_exists('username', $env) 
-        || ! array_key_exists('password', $env) 
+    ! array_key_exists('dbname', $env) 
+    || ! array_key_exists('host', $env) 
+    || ! array_key_exists('username', $env) 
+    || ! array_key_exists('password', $env) 
 ) {
-        exit('.envファイルに dbname, host, username, password が含まれていません。');
+    exit('.envファイルに dbname, host, username, password が含まれていません。');
 }
 
 // sqlファイルを開く
@@ -40,8 +40,8 @@ if ( count($argv) < 2 ) {
     exit( 'ファイル名を渡してください' );
 }
 $sqlfilename = $argv[1];
-if ( 1 !== preg_match( '/^create/', $sqlfilename ) ) {
-    exit( '.sqlファイル名は、createから始めてください' );
+if ( 1 !== preg_match( '/^insert/', $sqlfilename ) ) {
+    exit( '.sqlファイル名は、insertから始めてください' );
 }
 $sqlstring = @file_get_contents(
     __DIR__.'/../sql/'.$sqlfilename
@@ -66,17 +66,12 @@ try {
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
-//            PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
+            PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
         ]
     );
     $pdo->exec($sqlstring);
-    $stmt = $pdo->prepare('SHOW TABLES;');
-    $stmt->execute();
-    $result = $stmt->fetchAll();
 } catch (PDOException $e) {
     exit($e->getMessage()); 
 }
 
-// 結果を表示
-var_dump($result);
-
+echo 'insertされました。'.PHP_EOL;

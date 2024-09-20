@@ -27,12 +27,12 @@ while ( false !== $line = fgets($envfile, 1024) ) {
 
 // dbname などのチェック
 if( 
-        ! array_key_exists('dbname', $env) 
-        || ! array_key_exists('host', $env) 
-        || ! array_key_exists('username', $env) 
-        || ! array_key_exists('password', $env) 
+    ! array_key_exists('dbname', $env) 
+    || ! array_key_exists('host', $env) 
+    || ! array_key_exists('username', $env) 
+    || ! array_key_exists('password', $env) 
 ) {
-        exit('.envファイルに dbname, host, username, password が含まれていません。');
+    exit('.envファイルに dbname, host, username, password が含まれていません。');
 }
 
 // sqlファイルを開く
@@ -40,8 +40,8 @@ if ( count($argv) < 2 ) {
     exit( 'ファイル名を渡してください' );
 }
 $sqlfilename = $argv[1];
-if ( 1 !== preg_match( '/^create/', $sqlfilename ) ) {
-    exit( '.sqlファイル名は、createから始めてください' );
+if ( 1 !== preg_match( '/^update/', $sqlfilename ) ) {
+    exit( '.sqlファイル名は、updateから始めてください' );
 }
 $sqlstring = @file_get_contents(
     __DIR__.'/../sql/'.$sqlfilename
@@ -55,6 +55,38 @@ if ( $exec_bool !== 'Y' ) {
     exit('処理を中断しました。'.PHP_EOL);
 }
 
+// 処理後のcheck
+$checkarray = [];
+$sqlarray = explode( PHP_EOL, $sqlstring );
+
+foreach( $sqlarray as $line ) {
+    $line = trim( $line );
+    if ( str_contains($line, 'UPDATE') ) {
+        $tmparray = explode(' ', $line);
+        foreach($tmparray as $k => $v) {
+            if ($v === 'UPDATE') {
+                $checkarray['table_name'] = $tmparray[$k + 1];
+            }
+        }
+    }
+    if ( 1 === preg_match( '/^WHERE/', $line ) ) {
+        $line = str_replace(['WHERE ', ';'], '', $line);
+        $checkarray['where_condition'] = $line;
+    }
+}
+var_dump($checkarray);
+$checkselect_bool = false;
+if ( array_key_exists('table_name', $checkarray) && array_key_exists('where_condition', $checkarray) ) {
+    $checkselect = <<<EOL
+    SELECT * FROM {$checkarray['table_name']}
+    WHERE {$checkarray['where_condition']}
+    ;
+    EOL;
+    echo $checkselect.PHP_EOL;
+    echo 'UPDATE の処理後、この SELECT 文を実行しますか？[Y/n]'.PHP_EOL;
+    $checkselect_bool = (trim(fgets(STDIN)) === 'Y')?true:false;    
+}
+
 // dbに接続。参考：
 // https://qiita.com/te2ji/items/56c194b6cb9898d10f7f
 try {
@@ -66,17 +98,23 @@ try {
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
-//            PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
+            PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
         ]
     );
     $pdo->exec($sqlstring);
-    $stmt = $pdo->prepare('SHOW TABLES;');
-    $stmt->execute();
-    $result = $stmt->fetchAll();
+
+    if ( $checkselect_bool ) {
+        $stmt = $pdo->prepare( $checkselect );
+        $stmt->execute();
+        $result = $stmt->fetchAll();
+    }
+
 } catch (PDOException $e) {
     exit($e->getMessage()); 
 }
 
-// 結果を表示
-var_dump($result);
-
+if ( $checkselect_bool ) {
+    echo '処理が完了しました。結果を再確認してください。'.PHP_EOL;
+    var_dump($result);
+    echo PHP_EOL;
+}

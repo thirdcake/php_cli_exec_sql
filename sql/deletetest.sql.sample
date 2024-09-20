@@ -1,0 +1,3 @@
+-- delete sql
+DELETE FROM testtable
+WHERE test_id = 1;

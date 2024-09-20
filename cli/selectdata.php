@@ -37,14 +37,14 @@ if(
 
 // sqlファイルを開く
 if ( count($argv) < 2 ) {
-    exit( 'ファイル名を渡してください' );
+        exit( 'ファイル名を渡してください' );
 }
 $sqlfilename = $argv[1];
-if ( 1 !== preg_match( '/^create/', $sqlfilename ) ) {
-    exit( '.sqlファイル名は、createから始めてください' );
+if ( 1 !== preg_match( '/^select/', $sqlfilename ) ) {
+        exit( '.sqlファイル名は、selectから始めてください' );
 }
 $sqlstring = @file_get_contents(
-    __DIR__.'/../sql/'.$sqlfilename
+        __DIR__.'/../sql/'.$sqlfilename
 ) or exit( '.sqlファイルがsqlフォルダにありません' );
 
 // 実行文のチェック
@@ -66,11 +66,10 @@ try {
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
-//            PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
+            PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
         ]
     );
-    $pdo->exec($sqlstring);
-    $stmt = $pdo->prepare('SHOW TABLES;');
+    $stmt = $pdo->prepare( $sqlstring );
     $stmt->execute();
     $result = $stmt->fetchAll();
 } catch (PDOException $e) {
@@ -79,4 +78,3 @@ try {
 
 // 結果を表示
 var_dump($result);
-
