@@ -1,63 +1,30 @@
 <?php
 
+require_once __DIR__.'/../helper/functions.php';
 
-// .envファイルを$env連想配列にする
-$envfile = @fopen(
-        __DIR__.'/../.env',
-        'r'
-        ) or exit( '.envファイルが親フォルダにありません' );
-
-// 各行実行
-$env = [];
-while ( false !== $line = fgets($envfile, 1024) ) {
-        if ( false !== $eqpos = strpos( $line, '=' ) ) {
-                if ( false !== $hapos = strpos( $line, '#') ) {
-                        $line = substr($line, 0, $hapos);
-                }
-                $line = trim( $line );
-                $key = substr( $line, 0, $eqpos );
-                $key = trim($key);
-                $val = substr( $line, $eqpos + 1 );
-                $val = trim($val);
-                $val = preg_replace('/^\"/', '', $val);
-                $val = preg_replace('/\"$/', '', $val);
-                $env[$key] = $val;
-        }
-}
-
-// dbname などのチェック
-if( 
-    ! array_key_exists('dbname', $env) 
-    || ! array_key_exists('host', $env) 
-    || ! array_key_exists('username', $env) 
-    || ! array_key_exists('password', $env) 
-) {
-    exit('.envファイルに dbname, host, username, password が含まれていません。');
+// env.jsonファイルを$env連想配列にする
+$env = createEnvArray(__DIR__.'/../env.json');
+if (array_key_exists('errorMessage', $env)) {
+    exit($env['errorMessage'].PHP_EOL);
 }
 
 // sqlファイルを開く
-if ( count($argv) < 2 ) {
-    exit( 'ファイル名を渡してください' );
+$sql = createSqlString($argv, 'update');
+if (array_key_exists('errorMessage', $sql)) {
+    exit($sql['errorMessage'].PHP_EOL);
 }
-$sqlfilename = $argv[1];
-if ( 1 !== preg_match( '/^update/', $sqlfilename ) ) {
-    exit( '.sqlファイル名は、updateから始めてください' );
-}
-$sqlstring = @file_get_contents(
-    __DIR__.'/../sql/'.$sqlfilename
-) or exit( '.sqlファイルがsqlフォルダにありません' );
 
 // 実行文のチェック
-echo $sqlstring;
+echo $sql['string'];
 echo 'このSQLを実行します。よろしいですか？[Y/n]'.PHP_EOL;
-$exec_bool = trim(fgets(STDIN));
-if ( $exec_bool !== 'Y' ) {
+$not_exec = (trim(fgets(STDIN)) !== 'Y');
+if ($not_exec) {
     exit('処理を中断しました。'.PHP_EOL);
 }
 
 // 処理後のcheck
 $checkarray = [];
-$sqlarray = explode( PHP_EOL, $sqlstring );
+$sqlarray = explode( PHP_EOL, $sql['string'] );
 
 foreach( $sqlarray as $line ) {
     $line = trim( $line );
@@ -84,7 +51,7 @@ if ( array_key_exists('table_name', $checkarray) && array_key_exists('where_cond
     EOL;
     echo $checkselect.PHP_EOL;
     echo 'UPDATE の処理後、この SELECT 文を実行しますか？[Y/n]'.PHP_EOL;
-    $checkselect_bool = (trim(fgets(STDIN)) === 'Y')?true:false;    
+    $checkselect_bool = (trim(fgets(STDIN)) === 'Y');    
 }
 
 // dbに接続。参考：
@@ -101,7 +68,7 @@ try {
             PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
         ]
     );
-    $pdo->exec($sqlstring);
+    $pdo->exec($sql['string']);
 
     if ( $checkselect_bool ) {
         $stmt = $pdo->prepare( $checkselect );
@@ -117,4 +84,6 @@ if ( $checkselect_bool ) {
     echo '処理が完了しました。結果を再確認してください。'.PHP_EOL;
     var_dump($result);
     echo PHP_EOL;
+} else {
+    echo '処理が完了しました'.PHP_EOL;
 }

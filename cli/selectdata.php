@@ -1,57 +1,24 @@
 <?php
 
+require_once __DIR__.'/../helper/functions.php';
 
-// .envファイルを$env連想配列にする
-$envfile = @fopen(
-        __DIR__.'/../.env',
-        'r'
-        ) or exit( '.envファイルが親フォルダにありません' );
-
-// 各行実行
-$env = [];
-while ( false !== $line = fgets($envfile, 1024) ) {
-        if ( false !== $eqpos = strpos( $line, '=' ) ) {
-                if ( false !== $hapos = strpos( $line, '#') ) {
-                        $line = substr($line, 0, $hapos);
-                }
-                $line = trim( $line );
-                $key = substr( $line, 0, $eqpos );
-                $key = trim($key);
-                $val = substr( $line, $eqpos + 1 );
-                $val = trim($val);
-                $val = preg_replace('/^\"/', '', $val);
-                $val = preg_replace('/\"$/', '', $val);
-                $env[$key] = $val;
-        }
-}
-
-// dbname などのチェック
-if( 
-        ! array_key_exists('dbname', $env) 
-        || ! array_key_exists('host', $env) 
-        || ! array_key_exists('username', $env) 
-        || ! array_key_exists('password', $env) 
-) {
-        exit('.envファイルに dbname, host, username, password が含まれていません。');
+// env.jsonファイルを$env連想配列にする
+$env = createEnvArray(__DIR__.'/../env.json');
+if (array_key_exists('errorMessage', $env)) {
+    exit($env['errorMessage'].PHP_EOL);
 }
 
 // sqlファイルを開く
-if ( count($argv) < 2 ) {
-        exit( 'ファイル名を渡してください' );
+$sql = createSqlString($argv, 'select');
+if (array_key_exists('errorMessage', $sql)) {
+    exit($sql['errorMessage'].PHP_EOL);
 }
-$sqlfilename = $argv[1];
-if ( 1 !== preg_match( '/^select/', $sqlfilename ) ) {
-        exit( '.sqlファイル名は、selectから始めてください' );
-}
-$sqlstring = @file_get_contents(
-        __DIR__.'/../sql/'.$sqlfilename
-) or exit( '.sqlファイルがsqlフォルダにありません' );
 
 // 実行文のチェック
-echo $sqlstring;
+echo $sql['string'];
 echo 'このSQLを実行します。よろしいですか？[Y/n]'.PHP_EOL;
-$exec_bool = trim(fgets(STDIN));
-if ( $exec_bool !== 'Y' ) {
+$not_exec = (trim(fgets(STDIN)) !== 'Y');
+if ($not_exec) {
     exit('処理を中断しました。'.PHP_EOL);
 }
 
@@ -69,7 +36,7 @@ try {
             PDO::MYSQL_ATTR_MULTI_STATEMENTS => false,
         ]
     );
-    $stmt = $pdo->prepare( $sqlstring );
+    $stmt = $pdo->prepare( $sql['string'] );
     $stmt->execute();
     $result = $stmt->fetchAll();
 } catch (PDOException $e) {

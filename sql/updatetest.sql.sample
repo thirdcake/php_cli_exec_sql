@@ -1,4 +1,4 @@
 -- update sql
 UPDATE testtable
-SET test_body = 'これは、updateされた文章です'
-WHERE test_id = 1;
+SET test_body = 'これは、update'
+WHERE test_id = 2;
